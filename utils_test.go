@@ -3,7 +3,7 @@ package watchdog
 import "testing"
 
 func TestCheckPath(t *testing.T) {
-	err := checkPath("/var/temp/pprof")
+	err := checkPath("/var/tmp/pprof")
 	if err != nil {
 		t.Error(err)
 	}

@@ -26,6 +26,7 @@ func NewMemoryWatcher() *MemoryWatcher {
 	w.close = make(chan struct{})
 
 	executor := &MemoryCollector{}
+	executor.CollectFilePath = defaultCollectPath
 	executor.CollectSec = 10
 	executor.MaxFileBackup = 3
 	w.Executors = executor
@@ -125,11 +126,11 @@ func (c *MemoryCollector) Execute() error {
 	}
 
 	// 删除之前的
-	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("memory-%d", c.fileIndex)); err != nil {
+	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("%s-%d",memoryPrefix, c.fileIndex)); err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("memory-%d-%s.pprof", c.fileIndex, time.Now().Format("01-02-15:04:05"))
+	fileName := fmt.Sprintf("%s-%d-%s.pprof",memoryPrefix, c.fileIndex, time.Now().Format("01-02-15:04:05"))
 	w, err := os.Create(filepath.Join(c.CollectFilePath, fileName))
 	if err != nil {
 		return err

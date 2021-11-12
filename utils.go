@@ -9,6 +9,9 @@ import (
 
 func removeFileByPrefix(basePath string, prefix string) error {
 	_ = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if info == nil || info.IsDir() {
+			return nil
+		}
 		if strings.HasPrefix(info.Name(), prefix) {
 			return os.Remove(filepath.Join(basePath, info.Name()))
 		}

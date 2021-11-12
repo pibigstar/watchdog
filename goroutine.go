@@ -26,6 +26,7 @@ func NewGoroutineWatcher() *GoroutineWatcher {
 	w.close = make(chan struct{})
 
 	executor := &GoroutineCollector{}
+	executor.CollectFilePath = defaultCollectPath
 	executor.CollectSec = 10
 	executor.MaxFileBackup = 3
 	w.Executors = executor
@@ -86,6 +87,7 @@ func (c *GoroutineWatcher) Watch() {
 		defer func() {
 			if e := recover(); e != nil {
 				fmt.Println("cpu watch recover:", e)
+				panic(e)
 			}
 		}()
 
@@ -125,16 +127,16 @@ func (c *GoroutineCollector) Execute() error {
 	}
 
 	// 删除之前的
-	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("memory-%d", c.fileIndex)); err != nil {
+	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("%s-%d", goPrefix, c.fileIndex)); err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("memory-%d-%s.pprof", c.fileIndex, time.Now().Format("01-02-15:04:05"))
+	fileName := fmt.Sprintf("%s-%d-%s.pprof", goPrefix, c.fileIndex, time.Now().Format("01-02-15:04:05"))
 	w, err := os.Create(filepath.Join(c.CollectFilePath, fileName))
 	if err != nil {
 		return err
 	}
-	if err := pprof.Lookup("heap").WriteTo(w, 0); err != nil {
+	if err := pprof.Lookup(goPrefix).WriteTo(w, 0); err != nil {
 		return err
 	}
 

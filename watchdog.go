@@ -1,8 +1,14 @@
 package watchdog
 
 var (
-	defaultCollectPath = "/var/temp/pprof"
+	defaultCollectPath = "/var/tmp/pprof"
 	list               []Watcher
+)
+
+const (
+	cpuPrefix    = "cpu"
+	goPrefix     = "goroutine"
+	memoryPrefix = "memory"
 )
 
 func Run(watchers ...Watcher) {

@@ -79,11 +79,11 @@ func (c *CpuCollector) Execute() error {
 	}
 
 	// 删除之前的
-	if err := removeFileByPrefix(defaultCollectPath, fmt.Sprintf("cpu-%d", c.fileIndex)); err != nil {
+	if err := removeFileByPrefix(defaultCollectPath, fmt.Sprintf("%s-%d",cpuPrefix, c.fileIndex)); err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("cpu-%d-%s.pprof", c.fileIndex, time.Now().Format("01-02-15:04:05"))
+	fileName := fmt.Sprintf("%s-%d-%s.pprof", cpuPrefix,c.fileIndex, time.Now().Format("01-02-15:04:05"))
 	w, err := os.Create(filepath.Join(defaultCollectPath, fileName))
 	if err != nil {
 		return err
