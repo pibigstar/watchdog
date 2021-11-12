@@ -1,15 +1,24 @@
 package watchdog
 
+import "os"
+
 var (
 	defaultCollectPath = "/var/tmp/pprof"
 	list               []Watcher
 )
 
 const (
+	CollectPathEnv = "COLLECT_PATH"
 	cpuPrefix    = "cpu"
 	goPrefix     = "goroutine"
 	memoryPrefix = "memory"
 )
+
+func init() {
+	if s := os.Getenv(CollectPathEnv); s != "" {
+		defaultCollectPath = s
+	}
+}
 
 func Run(watchers ...Watcher) {
 	list = append(list, watchers...)
