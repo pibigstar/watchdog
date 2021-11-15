@@ -51,13 +51,13 @@ func (c *MemoryWatcher) get() float64 {
 
 // 触发判断
 func (c *MemoryWatcher) trigger() bool {
-	// 当前指标超过最大阈值
-	if c.currentPercent >= c.MaxThreshold {
-		return true
-	}
 	// 指标在下降
 	if c.currentPercent <= c.lastPercent {
 		return false
+	}
+	// 当前指标超过最大阈值
+	if c.currentPercent >= c.MaxThreshold {
+		return true
 	}
 	// 上涨量超过上涨阈值
 	if (c.currentPercent - c.lastPercent) >= c.IncrThreshold {

@@ -53,13 +53,13 @@ func (c *CpuWatcher) get() float64 {
 
 // 触发判断
 func (c *CpuWatcher) trigger() bool {
-	// 当前指标超过最大阈值
-	if c.currentPercent >= c.MaxThreshold {
-		return true
-	}
 	// 指标在下降
 	if c.currentPercent <= c.lastPercent {
 		return false
+	}
+	// 当前指标超过最大阈值
+	if c.currentPercent >= c.MaxThreshold {
+		return true
 	}
 	// 上涨量超过上涨阈值
 	if (c.currentPercent - c.lastPercent) >= c.IncrThreshold {
@@ -131,7 +131,7 @@ func (c *CpuWatcher) Watch() {
 			case <-t.C:
 				// 设置当前cpu信息
 				c.set()
-				// 判断是ex阈值
+				// 判断是否超过阈值
 				if c.trigger() {
 					// 采集
 					if err := c.Executors.Execute(); err != nil {
