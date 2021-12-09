@@ -1,10 +1,13 @@
 package watchdog
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
-func runFileServer(path string) {
-	err := http.ListenAndServe(":9999", http.FileServer(http.Dir(path)))
+func runFileServer() {
+	err := http.ListenAndServe(fmt.Sprintf(":%d", defaultPprofPort), http.FileServer(http.Dir(defaultCollectPath)))
 	if err != nil {
-		panic(err)
+		log.Println("ListenAndServe", err.Error())
 	}
 }

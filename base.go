@@ -9,7 +9,7 @@ type BaseWatcher struct {
 	IncrThreshold  float64       // 增长量阈值
 	MaxThreshold   float64       // 最大指标阈值
 	Interval       time.Duration // 监控间隔
-	Executors      Executors
+	Executors      []Executors   // 执行者
 }
 
 type BaseCollector struct {

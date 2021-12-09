@@ -2,12 +2,13 @@ package watchdog
 
 import (
 	"fmt"
-	"github.com/shirou/gopsutil/mem"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
 	"sync/atomic"
 	"time"
+
+	"github.com/shirou/gopsutil/mem"
 )
 
 type MemoryCollector struct {
@@ -29,7 +30,7 @@ func NewMemoryWatcher() *MemoryWatcher {
 	executor.CollectFilePath = defaultCollectPath
 	executor.CollectSec = 10
 	executor.MaxFileBackup = 3
-	w.Executors = executor
+	w.Executors = append(w.Executors, executor)
 	return w
 }
 
@@ -71,22 +72,23 @@ func (c *MemoryWatcher) check() error {
 		return fmt.Errorf("interval less 0")
 	}
 	if c.MaxThreshold <= 0 {
-		return fmt.Errorf("MaxThreshold less 0")
+		return fmt.Errorf("maxThreshold less 0")
 	}
 	if c.IncrThreshold <= 0 {
-		return fmt.Errorf("IncrThreshold less 0")
+		return fmt.Errorf("incrThreshold less 0")
 	}
 	return nil
 }
 
 func (c *MemoryWatcher) Watch() {
 	if err := c.check(); err != nil {
-		panic(err)
+		log.Println("check memory", err.Error())
+		return
 	}
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				fmt.Println("cpu watch recover:", e)
+				log.Println("cpu watch recover:", e)
 			}
 		}()
 
@@ -99,8 +101,10 @@ func (c *MemoryWatcher) Watch() {
 				// 判断是否达到阈值
 				if c.trigger() {
 					// 采集
-					if err := c.Executors.Execute(); err != nil {
-						fmt.Println(err.Error())
+					for _, exec := range c.Executors {
+						if err := exec.Execute(); err != nil {
+							log.Println(err.Error())
+						}
 					}
 				}
 			case <-c.close:
@@ -120,17 +124,17 @@ func (c *MemoryCollector) Execute() error {
 	if !atomic.CompareAndSwapInt32(&c.flag, 0, 1) {
 		return nil
 	}
-	// 删除一个最老的
+
 	if c.fileIndex >= c.MaxFileBackup {
 		atomic.StoreInt32(&c.fileIndex, 0)
 	}
 
-	// 删除之前的
-	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("%s-%d",memoryPrefix, c.fileIndex)); err != nil {
+	// 环形删除
+	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("%s-%d", memoryPrefix, c.fileIndex)); err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%s-%d-%s.pprof",memoryPrefix, c.fileIndex, time.Now().Format("01-02-15:04:05"))
+	fileName := fmt.Sprintf("%s-%d-%s.pprof", memoryPrefix, c.fileIndex, time.Now().Format("01-02-15:04:05"))
 	w, err := os.Create(filepath.Join(c.CollectFilePath, fileName))
 	if err != nil {
 		return err

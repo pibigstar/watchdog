@@ -2,12 +2,13 @@ package watchdog
 
 import (
 	"fmt"
-	"github.com/shirou/gopsutil/cpu"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
 	"sync/atomic"
 	"time"
+
+	"github.com/shirou/gopsutil/cpu"
 )
 
 // CPU采集器
@@ -30,7 +31,7 @@ func NewCpuWatcher() *CpuWatcher {
 	executor := &CpuCollector{}
 	executor.CollectSec = 10
 	executor.MaxFileBackup = 3
-	w.Executors = executor
+	w.Executors = append(w.Executors, executor)
 	return w
 }
 
@@ -73,17 +74,16 @@ func (c *CpuCollector) Execute() error {
 		return nil
 	}
 
-	// 删除一个最老的
 	if c.fileIndex >= c.MaxFileBackup {
 		atomic.StoreInt32(&c.fileIndex, 0)
 	}
 
-	// 删除之前的
-	if err := removeFileByPrefix(defaultCollectPath, fmt.Sprintf("%s-%d",cpuPrefix, c.fileIndex)); err != nil {
+	// 环形删除
+	if err := removeFileByPrefix(defaultCollectPath, fmt.Sprintf("%s-%d", cpuPrefix, c.fileIndex)); err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%s-%d-%s.pprof", cpuPrefix,c.fileIndex, time.Now().Format("01-02-15:04:05"))
+	fileName := fmt.Sprintf("%s-%d-%s.pprof", cpuPrefix, c.fileIndex, time.Now().Format("01-02-15:04:05"))
 	w, err := os.Create(filepath.Join(defaultCollectPath, fileName))
 	if err != nil {
 		return err
@@ -98,7 +98,6 @@ func (c *CpuCollector) Execute() error {
 	atomic.StoreInt32(&c.flag, 0)
 
 	return nil
-
 }
 
 func (c *CpuWatcher) check() error {
@@ -116,12 +115,13 @@ func (c *CpuWatcher) check() error {
 
 func (c *CpuWatcher) Watch() {
 	if err := c.check(); err != nil {
-		panic(err)
+		log.Println("check cpu", err.Error())
+		return
 	}
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				fmt.Println("cpu watch recover:", e)
+				log.Println("cpu watch recover:", e)
 			}
 		}()
 
@@ -134,8 +134,10 @@ func (c *CpuWatcher) Watch() {
 				// 判断是否超过阈值
 				if c.trigger() {
 					// 采集
-					if err := c.Executors.Execute(); err != nil {
-						fmt.Println(err.Error())
+					for _, exec := range c.Executors {
+						if err := exec.Execute(); err != nil {
+							log.Println(err.Error())
+						}
 					}
 				}
 			case <-c.close:

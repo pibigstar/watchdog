@@ -20,7 +20,7 @@ type GoroutineWatcher struct {
 
 func NewGoroutineWatcher() *GoroutineWatcher {
 	w := &GoroutineWatcher{}
-	w.MaxThreshold = 3000 // 超过 3000 进行告警
+	w.MaxThreshold = 5000 // 超过 5000 进行告警
 	w.IncrThreshold = 500 // 2s内goroutine上涨超过500
 	w.Interval = 2 * time.Second
 	w.close = make(chan struct{})
@@ -29,7 +29,7 @@ func NewGoroutineWatcher() *GoroutineWatcher {
 	executor.CollectFilePath = defaultCollectPath
 	executor.CollectSec = 10
 	executor.MaxFileBackup = 3
-	w.Executors = executor
+	w.Executors = append(w.Executors, executor)
 	return w
 }
 
@@ -81,13 +81,13 @@ func (c *GoroutineWatcher) check() error {
 
 func (c *GoroutineWatcher) Watch() {
 	if err := c.check(); err != nil {
-		panic(err)
+		log.Println("check goroutine", err.Error())
+		return
 	}
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				fmt.Println("cpu watch recover:", e)
-				panic(e)
+				log.Println("cpu watch recover:", e)
 			}
 		}()
 
@@ -100,8 +100,10 @@ func (c *GoroutineWatcher) Watch() {
 				// 判断是否达到阈值
 				if c.trigger() {
 					// 采集
-					if err := c.Executors.Execute(); err != nil {
-						fmt.Println(err.Error())
+					for _, exec := range c.Executors {
+						if err := exec.Execute(); err != nil {
+							log.Println(err.Error())
+						}
 					}
 				}
 			case <-c.close:
@@ -121,12 +123,12 @@ func (c *GoroutineCollector) Execute() error {
 	if !atomic.CompareAndSwapInt32(&c.flag, 0, 1) {
 		return nil
 	}
-	// 删除一个最老的
+
 	if c.fileIndex >= c.MaxFileBackup {
 		atomic.StoreInt32(&c.fileIndex, 0)
 	}
 
-	// 删除之前的
+	// 环形删除
 	if err := removeFileByPrefix(c.CollectFilePath, fmt.Sprintf("%s-%d", goPrefix, c.fileIndex)); err != nil {
 		return err
 	}
