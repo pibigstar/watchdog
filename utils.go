@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func removeFileByPrefix(basePath string, prefix string) error {
@@ -30,4 +32,12 @@ func checkPath(path string) error {
 		return err
 	}
 	return nil
+}
+
+func GenPassword(ps string) string {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ps), bcrypt.DefaultCost)
+	if err == nil {
+		return string(hashedPassword)
+	}
+	return ""
 }

@@ -8,3 +8,8 @@ func TestCheckPath(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestGenPassword(t *testing.T) {
+	s := "test"
+	t.Log(GenPassword(s))
+}
